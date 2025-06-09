@@ -1,7 +1,9 @@
-const { DataTypes, Model } = require('sequelize');
-const sequelize = require('../util/database');
+// src/model/Usuario.js
 
-class Usuario extends Model{}
+const { DataTypes, Model } = require('sequelize');
+const sequelize = require('../util/database'); // Certifique-se que o caminho está correto
+
+class Usuario extends Model {}
 
 Usuario.init({
   idUsuario: {
@@ -10,7 +12,7 @@ Usuario.init({
     autoIncrement: true,
   },
   nome: {
-    type: DataTypes.STRING,
+    type: DataTypes.STRING(100),
     allowNull: false,
   },
   CPF: {
@@ -22,6 +24,15 @@ Usuario.init({
       len: [11, 11],
     },
   },
+  // CAMPO ESSENCIAL ADICIONADO
+  email: {
+    type: DataTypes.STRING(100),
+    allowNull: false,
+    unique: true,
+    validate: {
+      isEmail: true, // Validação de formato de e-mail
+    },
+  },
   data_nascimento: {
     type: DataTypes.DATEONLY,
     allowNull: false,
@@ -31,7 +42,7 @@ Usuario.init({
     allowNull: false,
   },
   tipo_usuario: {
-    type: DataTypes.ENUM('FUNCIONARIO', 'CLIENTE'), // Exemplo de tipos possíveis
+    type: DataTypes.ENUM('FUNCIONARIO', 'CLIENTE'),
     allowNull: false,
   },
   senha_hash: {
@@ -40,18 +51,17 @@ Usuario.init({
   },
   otp_ativo: {
     type: DataTypes.STRING(6),
-    allowNull: true,
+    allowNull: true, // Correto, pois só tem valor quando um OTP é solicitado
   },
   otp_expiracao: {
     type: DataTypes.DATE,
-    allowNull: true,
+    allowNull: true, // Correto
   },
 }, {
   sequelize,
-  modelName : 'Usuarios' ,
+  modelName: 'Usuario', // ✅ Melhor manter singular para consistência
   tableName: 'Usuario',
   timestamps: false,
-
-})
+});
 
 module.exports = Usuario;

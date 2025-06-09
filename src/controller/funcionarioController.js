@@ -1,5 +1,5 @@
 const FuncionarioDAO = require('../dao/funcionarioDAO');
-const UsuarioDAO = require('../dao/UsuarioDAO');
+const usuarioDAO = require('../dao/usuarioDAO');
 const bcrypt = require('bcrypt');
 class FuncionarioController {
   static async getAll(req, res) {
@@ -16,7 +16,7 @@ static async create(req, res) {
   try {
     // Verificar se CPF já existe
     const cpf = usuario.cpf;
-    const CPF = await UsuarioDAO.buscarPorCpf(cpf);
+    const CPF = await usuarioDAO.buscarPorCpf(cpf);
     if (CPF) {
       return res.status(400).json({ erro: 'CPF já cadastrado' });
     }
@@ -25,7 +25,7 @@ static async create(req, res) {
     const senhaHash = await bcrypt.hash(usuario.senha, 10);
 
     // Criar usuário
-    const novoUsuario = await UsuarioDAO.criar({
+    const novoUsuario = await usuarioDAO.criar({
       nome: usuario.nome,
       CPF: usuario.cpf,
       data_nascimento: usuario.data_nascimento,

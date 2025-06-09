@@ -1,115 +1,125 @@
-const UsuarioDAO = require('../dao/UsuarioDAO');
+// src/controller/UsuarioController.js
+
+const usuarioDAO = require('../dao/usuarioDAO');
 const bcrypt = require('bcrypt');
-const gerarOtp = require('../helpers/gerarOtp');
-const { enviarEmail } = require('../helpers/emailService');
+const crypto = require('crypto'); // Módulo nativo do Node para gerar OTP seguro
+const { enviarEmailOTP } = require('../helpers/emailService');
 
 class UsuarioController {
+  
+  // ✅ MÉTODO ADICIONADO PARA CORRESPONDER À ROTA /listar
   static async getAll(req, res) {
     try {
-      const usuarios = await UsuarioDAO.buscarTodos();
-      res.json(usuarios);
+      // Este método 'buscarTodos' precisa existir no seu arquivo usuarioDAO.js
+      const usuarios = await usuarioDAO.buscarTodos(); 
+
+      // É uma boa prática não expor dados sensíveis como senhas e OTPs
+      const usuariosLimpados = usuarios.map(user => {
+        const { senha_hash, otp_ativo, otp_expiracao, ...usuarioLimpo } = user.get({ plain: true });
+        return usuarioLimpo;
+      });
+
+      res.status(200).json(usuariosLimpados);
     } catch (error) {
-      res.status(500).json({ erro: 'Erro ao buscar usuários.' });
+      console.error('Erro ao buscar usuários:', error);
+      res.status(500).json({ erro: 'Erro interno ao buscar usuários.' });
     }
   }
 
   static async create(req, res) {
-    const { nome, cpf, data_nascimento, telefone, senha, tipo_usuario } = req.body;
+    // ✅ Adicionado "email" na desestruturação
+    const { nome, cpf, email, data_nascimento, telefone, senha, tipo_usuario } = req.body;
 
     try {
-      // Verificar se CPF já existe
-      const CPF = await UsuarioDAO.buscarPorCpf(cpf);
-      if (CPF) {
-        return res.status(400).json({ erro: 'CPF já cadastrado.' });
+      // Este método precisa existir no seu usuarioDAO.js
+      const usuarioExistente = await usuarioDAO.buscarPorCpfOuEmail(cpf, email); 
+      if (usuarioExistente) {
+        return res.status(400).json({ erro: 'CPF ou E-mail já cadastrado.' });
       }
 
-      // Criptografar senha
       const senhaHash = await bcrypt.hash(senha, 10);
 
-      // Criar usuário
-      const novoUsuario = await UsuarioDAO.criar({
+      // Este método precisa existir no seu usuarioDAO.js
+      const novoUsuario = await usuarioDAO.criar({ 
         nome,
-        cpf,
+        CPF: cpf,
+        email,
         data_nascimento,
         telefone,
-        tipo_usuario, // 'CLIENTE' ou 'FUNCIONARIO'
-        senha_hash: senhaHash
+        tipo_usuario,
+        senha_hash: senhaHash,
       });
 
+      // Retornar usuário sem a senha
+      const { senha_hash, ...usuarioSemSenha } = novoUsuario.get({ plain: true });
       res.status(201).json({
         mensagem: 'Usuário criado com sucesso.',
-        usuario: {
-          idUsuario: novoUsuario.idUsuario,
-          nome: novoUsuario.nome,
-          cpf: novoUsuario.cpf,
-          telefone: novoUsuario.telefone,
-          data_nascimento: novoUsuario.data_nascimento,
-          tipo_usuario: novoUsuario.tipo_usuario
-        }
+        usuario: usuarioSemSenha,
       });
-
     } catch (error) {
       console.error(error);
       res.status(500).json({ erro: 'Erro ao criar usuário.' });
     }
   }
 
-  static async sendOtp(req, res) {
+  // ✅ Renomeado e refatorado para usar o Banco de Dados
+  static async solicitarOTP(req, res) {
     const { email } = req.body;
     if (!email) {
-      return res.status(400).json({ erro: 'Informe o e-mail para envio do OTP.' });
+      return res.status(400).json({ erro: 'O e-mail é obrigatório.' });
     }
 
     try {
-      // 1. Gere o OTP
-      const otp = gerarOtp(6); // 6 dígitos
-      const expiracao = 10 * 60 * 1000; // 10 minutos
+      // Este método precisa existir no seu usuarioDAO.js
+      const usuario = await usuarioDAO.buscarPorEmail(email); 
+      if (!usuario) {
+        return res.status(404).json({ erro: 'Usuário não encontrado.' });
+      }
 
-      // 2. Armazene em memória (exemplo rápido)
-      if (!global.OTPS) global.OTPS = {};
-      global.OTPS[email] = {
-        code: otp,
-        expiresAt: Date.now() + expiracao
-      };
+      const otp = crypto.randomInt(100000, 999999).toString();
+      const expiracao = new Date(Date.now() + 5 * 60 * 1000); // 5 minutos de validade
 
-      // 3. Envie o e-mail
-      const assunto = 'Seu código de verificação (OTP)';
-      const texto = `Olá,\n\nSeu código de verificação é: ${otp}\n\nEste código expira em 10 minutos.\n\nEquipe SeuApp`;
-      await enviarEmail(email, assunto, texto);
+      await usuario.update({ otp_ativo: otp, otp_expiracao: expiracao });
 
-      res.status(200).json({ mensagem: 'OTP enviado com sucesso para o e-mail informado.' });
+      await enviarEmailOTP(usuario.email, otp);
+
+      res.status(200).json({ mensagem: 'OTP enviado com sucesso para o seu e-mail.' });
     } catch (error) {
-      console.error('Erro ao gerar/enviar OTP:', error);
-      res.status(500).json({ erro: 'Falha ao enviar OTP. Tente novamente mais tarde.' });
+      console.error('Erro ao solicitar OTP:', error);
+      res.status(500).json({ erro: 'Falha ao processar a solicitação de OTP.' });
     }
   }
 
-  static async validateOtp(req, res) {
+  //Renomeado e refatorado para usar o Banco de Dados
+  static async verificarOTP(req, res) {
     const { email, otp } = req.body;
     if (!email || !otp) {
-      return res.status(400).json({ erro: 'Informe e-mail e OTP para validação.' });
+      return res.status(400).json({ erro: 'E-mail e OTP são obrigatórios.' });
     }
 
     try {
-      const registro = (global.OTPS && global.OTPS[email]) || null;
-      if (!registro) {
-        return res.status(400).json({ erro: 'Nenhum OTP encontrado para este e-mail.' });
+      const usuario = await usuarioDAO.buscarPorEmail(email);
+      if (!usuario || !usuario.otp_ativo) {
+        return res.status(400).json({ erro: 'Nenhum OTP pendente para este usuário.' });
       }
 
-      if (Date.now() > registro.expiresAt) {
-        delete global.OTPS[email];
-        return res.status(400).json({ erro: 'OTP expirado.' });
+      if (new Date() > usuario.otp_expiracao) {
+        await usuario.update({ otp_ativo: null, otp_expiracao: null }); // Limpa o OTP expirado
+        return res.status(400).json({ erro: 'OTP expirado. Solicite um novo.' });
       }
 
-      if (registro.code !== otp) {
+      if (usuario.otp_ativo !== otp) {
         return res.status(400).json({ erro: 'OTP inválido.' });
       }
 
-      delete global.OTPS[email];
-      res.status(200).json({ mensagem: 'OTP validado com sucesso.' });
+      // Limpa o OTP após o sucesso para evitar reuso
+      await usuario.update({ otp_ativo: null, otp_expiracao: null });
+
+      // Aqui, você pode gerar um token JWT e logar o usuário
+      res.status(200).json({ mensagem: 'OTP validado com sucesso!' });
     } catch (error) {
       console.error('Erro ao validar OTP:', error);
-      res.status(500).json({ erro: 'Falha na validação do OTP. Tente novamente.' });
+      res.status(500).json({ erro: 'Falha na validação do OTP.' });
     }
   }
 }
