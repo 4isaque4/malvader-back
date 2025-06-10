@@ -1,54 +1,63 @@
+// src/controller/clienteController.js
+
+const sequelize = require('../util/database');
 const ClienteDAO = require('../dao/clienteDAO');
-const usuarioDAO = require('../dao/usuarioDAO');
+const UsuarioDAO = require('../dao/usuarioDAO');
 const bcrypt = require('bcrypt');
+
 class ClienteController {
-  
+
   static async getAll(req, res) {
     try {
-      const clientes = await ClienteDAO.buscarTodos();
-      res.json(clientes);
+      const clientes = await ClienteDAO.buscarTodos(); 
+      res.status(200).json(clientes);
     } catch (error) {
-      res.status(500).json({ erro: 'Erro ao busca usuários.' });
+      console.error('Erro ao buscar clientes:', error);
+      res.status(500).json({ erro: 'Erro ao buscar clientes.' });
     }
   }
-static async create(req, res) {
 
-    const { usuario, cliente } = req.body;
+  static async create(req, res) {
+    const t = await sequelize.transaction();
     try {
-      // Verificar se CPF já existe
-      const cpf = usuario.cpf;
-      const CPF = await usuarioDAO.buscarPorCpf(cpf);
-      if (CPF) {
-        return res.status(400).json({ erro: 'CPF já cadastrado' });
+      const { usuario, cliente } = req.body;
+
+      // ✅ CORREÇÃO APLICADA AQUI:
+      // Chamando a função correta 'buscarPorCpfOuEmail' que existe no DAO.
+      const usuarioExistente = await UsuarioDAO.buscarPorCpfOuEmail(usuario.cpf, usuario.email);
+      if (usuarioExistente) {
+        await t.rollback();
+        return res.status(400).json({ erro: 'CPF ou E-mail já cadastrado.' });
       }
 
-      // Criptografar senha
       const senhaHash = await bcrypt.hash(usuario.senha, 10);
 
-      // Criar usuário
-      const novoUsuario = await usuarioDAO.criar({
+      const novoUsuario = await UsuarioDAO.criar({
         nome: usuario.nome,
-        CPF: usuario.cpf,
-        data_nascimento: usuario.data_nascimento,
+        cpf: usuario.cpf,
+        email: usuario.email,
+        dataNascimento: usuario.data_nascimento,
         telefone: usuario.telefone,
-        tipo_usuario: 'CLIENTE',
-        senha_hash: senhaHash
-      });
+        tipoUsuario: 'CLIENTE',
+        senhaHash: senhaHash
+      }, { transaction: t });
 
-      // Criar cliente vinculado
       const novoCliente = await ClienteDAO.criar({
-        score_credito: cliente.score_credito || 0,
-        Usuario_idUsuario: novoUsuario.idUsuario
-      });
+        idUsuario: novoUsuario.id_usuario,
+        scoreCredito: cliente.scoreCredito || 0
+      }, { transaction: t });
+
+      await t.commit();
 
       res.status(201).json({
-        mensagem: 'Cliente criado com sucesso',
+        mensagem: 'Cliente criado com sucesso.',
         cliente: {
-          id_cliente: novoCliente.id_cliente,
-          score_credito: novoCliente.score_credito,
+          idCliente: novoCliente.idCliente,
+          scoreCredito: novoCliente.scoreCredito,
           usuario: {
-            idUsuario: novoUsuario.idUsuario,
+            idUsuario: novoUsuario.id_usuario,
             nome: novoUsuario.nome,
+            email: novoUsuario.email,
             cpf: novoUsuario.cpf,
             telefone: novoUsuario.telefone
           }
@@ -56,55 +65,51 @@ static async create(req, res) {
       });
 
     } catch (error) {
-      console.error(error);
-      res.status(500).json({ erro: 'Erro ao criar cliente' });
+      await t.rollback();
+      console.error('Erro ao criar cliente:', error);
+      res.status(500).json({ erro: 'Erro ao criar cliente.' });
     }
   }
 
-static async update(req, res) {
-  try {
-    const { cpf } = req.params;
+  static async update(req, res) {
+    try {
+      const { cpf } = req.params;
+      const { nome, telefone, dataNascimento, scoreCredito } = req.body;
 
-    const {
-      nome,
-      telefone,
-      data_nascimento,
-      score_credito
-    } = req.body;
+      const resultado = await ClienteDAO.atualizarPorCpf(cpf, {
+        dadosUsuario: { nome, telefone, dataNascimento },
+        dadosCliente: { scoreCredito }
+      });
 
-    const dadosUsuario = { nome, telefone, data_nascimento };
-    const dadosCliente = { score_credito };
+      if (!resultado) {
+        return res.status(404).json({ erro: 'Cliente não encontrado.' });
+      }
 
-    const resultado = await ClienteDAO.atualizar(cpf, dadosUsuario, dadosCliente);
-
-    if (!resultado) {
-      return res.status(404).json({ erro: 'Cliente não encontrado.' });
+      res.status(200).json({
+        mensagem: 'Cliente atualizado com sucesso.',
+        cliente: resultado
+      });
+    } catch (error) {
+      console.error('Erro ao atualizar cliente:', error);
+      res.status(500).json({ erro: 'Erro ao atualizar cliente.' });
     }
+  }
 
-    res.status(200).json({
-      mensagem: 'Cliente atualizado com sucesso.',
-      cliente: resultado
-    });
-  } catch (error) {
-    console.error('Erro ao atualizar cliente:', error);
-    res.status(500).json({ erro: 'Erro ao atualizar cliente.' });
+  static async delete(req, res) {
+    try {
+      const { cpf } = req.params;
+      const resultado = await ClienteDAO.deletarPorCpf(cpf);
+
+      if (!resultado) {
+        return res.status(404).json({ erro: 'Cliente não encontrado.' });
+      }
+
+      res.status(200).json({ mensagem: 'Cliente deletado com sucesso.' });
+    } catch (error) {
+      console.error('Erro ao deletar cliente:', error);
+      res.status(500).json({ erro: 'Erro ao deletar cliente.' });
+    }
   }
 }
-static async delete(req, res) {
-  try {
-    const { cpf } = req.params;
 
-    const resultado = await ClienteDAO.deletar(cpf);
-
-    if (!resultado) {
-      return res.status(404).json({ erro: 'Cliente não encontrado.' });
-    }
-
-    res.status(200).json({ mensagem: 'Cliente deletado com sucesso.' });
-  } catch (error) {
-    console.error('Erro ao deletar cliente:', error);
-    res.status(500).json({ erro: 'Erro ao deletar cliente.' });
-  }
-}
-}
 module.exports = ClienteController;
