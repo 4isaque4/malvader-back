@@ -18,7 +18,7 @@ async function exportarParaExcel(dados, nomeArquivo) {
 
   const filePath = path.join(__dirname, '..', '..', `${nomeArquivo}.xlsx`);
   await workbook.xlsx.writeFile(filePath);
-  console.log(`📁 Excel gerado em: ${filePath}`);
+  console.log(`Excel gerado em: ${filePath}`);
 }
 
 // Exporta para PDF
@@ -40,7 +40,7 @@ function exportarParaPDF(dados, nomeArquivo) {
   });
 
   doc.end();
-  console.log(`📄 PDF gerado em: ${filePath}`);
+  console.log(`PDF gerado em: ${filePath}`);
 }
 
 // Exporta as funções
