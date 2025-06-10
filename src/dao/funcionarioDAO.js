@@ -1,77 +1,115 @@
-//CRUD de funcionários, autenticação e permissões.
+// src/dao/funcionarioDAO.js
+
+const sequelize = require('../util/database');
 const Usuario = require('../model/Usuario');
 const Funcionario = require('../model/Funcionario');
+
 class FuncionarioDAO {
-  // Buscar todos os usuários
-static async buscarTodos() {
+  
+  /**
+   * Busca todos os funcionários e inclui os dados do usuário associado.
+   * @returns {Promise<Array<Funcionario>>} Uma lista de todos os funcionários com seus dados de usuário.
+   */
+  static async buscarTodos() {
     try {
-      const funcionarios = await Funcionario.findAll({
-  include: {
-    model: Usuario,
-    as: 'usuario',
-    attributes: ['idUsuario', 'nome', 'CPF', 'telefone', 'data_nascimento', 'tipo_usuario']
-    //
-  }
-});
-      return funcionarios;
+      return await Funcionario.findAll({
+        include: {
+          model: Usuario,
+          as: 'dadosUsuario', // Usa o alias definido na associação
+          attributes: { exclude: ['senhaHash', 'otpAtivo', 'otpExpiracao'] } // Exclui campos sensíveis
+        }
+      });
     } catch (error) {
-      throw error;
-    }
-}
-
-static async criar(dadosFuncionario) {
-    try {
-      const funcionario = await Funcionario.create(dadosFuncionario);
-      return funcionario;
-    } catch (error) {
+      console.error("Erro ao buscar todos os funcionários:", error);
       throw error;
     }
   }
-static async buscarPorCpf(cpf) {
-    return await Usuario.findOne({ where: { CPF: cpf } });
+
+  /**
+   * Cria um novo registro de funcionário.
+   * @param {object} dadosFuncionario - Dados para criar o funcionário.
+   * @param {object} options - Opções adicionais, como a transação.
+   * @returns {Promise<Funcionario>} O novo funcionário criado.
+   */
+  static async criar(dadosFuncionario, options = {}) {
+    try {
+      return await Funcionario.create(dadosFuncionario, options);
+    } catch (error) {
+      console.error("Erro ao criar funcionário:", error);
+      throw error;
+    }
   }
 
-static async atualizar(cpf, dadosUsuario, dadosCliente) {
-  try {
-    // Buscar o usuário pelo CPF
-    const usuario = await Usuario.findOne({ where: { CPF: cpf } });
-    if (!usuario) return null;
+  /**
+   * Atualiza os dados de um funcionário e do usuário associado a ele, identificado pelo CPF.
+   * @param {string} cpf - O CPF do usuário-funcionário.
+   * @param {object} dados - Objeto contendo dados do usuário e do funcionário a serem atualizados.
+   * @returns {Promise<Funcionario|null>} O funcionário atualizado com os dados do usuário.
+   */
+  static async atualizarPorCpf(cpf, dados) {
+    const t = await sequelize.transaction();
+    try {
+      const usuario = await Usuario.findOne({ where: { cpf } }, { transaction: t });
+      if (!usuario) {
+        await t.rollback();
+        return null;
+      }
 
-    // Buscar o cliente vinculado ao usuário
-    const funcionario = await Funcionario.findOne({ where: { id_usuario: usuario.idUsuario } });
-    if (!funcionario) return null;
+      const funcionario = await Funcionario.findOne({ where: { idUsuario: usuario.id_usuario } }, { transaction: t });
+      if (!funcionario) {
+        await t.rollback();
+        return null;
+      }
 
-    // Atualizar dados
-    await usuario.update(dadosUsuario);
-    await funcionario.update(dadosCliente);
+      // Atualiza os dados do usuário e do funcionário
+      if (dados.dadosUsuario) await usuario.update(dados.dadosUsuario, { transaction: t });
+      if (dados.dadosFuncionario) await funcionario.update(dados.dadosFuncionario, { transaction: t });
 
-    return {
-      usuarioAtualizado: usuario,
-      funcionarioAtualizado: funcionario
-    };
-  } catch (error) {
-    throw error;
+      await t.commit();
+      
+      // Recarrega o funcionário com os dados atualizados do usuário para retornar a informação completa
+      return await Funcionario.findByPk(funcionario.idFuncionario, {
+        include: { model: Usuario, as: 'dadosUsuario' }
+      });
+
+    } catch (error) {
+      await t.rollback();
+      console.error(`Erro ao atualizar funcionário com CPF ${cpf}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Deleta um funcionário e o usuário associado a ele, identificado pelo CPF.
+   * @param {string} cpf - O CPF do usuário-funcionário a ser deletado.
+   * @returns {Promise<boolean>} Retorna true se a deleção foi bem-sucedida, false caso contrário.
+   */
+  static async deletarPorCpf(cpf) {
+    const t = await sequelize.transaction();
+    try {
+      const usuario = await Usuario.findOne({ where: { cpf } }, { transaction: t });
+      if (!usuario) {
+        await t.rollback();
+        return false;
+      }
+      
+      // A deleção do funcionário acontece primeiro para respeitar a chave estrangeira.
+      // O banco de dados está configurado para SET NULL no campo 'id_supervisor'
+      // dos subordinados, então a hierarquia é mantida.
+      await Funcionario.destroy({ where: { idUsuario: usuario.id_usuario } }, { transaction: t });
+      
+      // Depois deleta o registro de usuário
+      await usuario.destroy({ transaction: t });
+
+      await t.commit();
+      return true;
+
+    } catch (error) {
+      await t.rollback();
+      console.error(`Erro ao deletar funcionário com CPF ${cpf}:`, error);
+      throw error;
+    }
   }
 }
 
-static async deletar(cpf) {
-  try {
-    // Buscar o usuário pelo CPF
-    const usuario = await Usuario.findOne({ where: { CPF: cpf } });
-    if (!usuario) return null;
-
-    // Buscar o cliente vinculado
-    const funcionario = await Funcionario.findOne({ where: { id_usuario: usuario.idUsuario } });
-    if (!funcionario) return null;
-
-    // Deletar cliente e depois o usuário
-    await funcionario.destroy();
-    await usuario.destroy();
-
-    return true;
-  } catch (error) {
-    throw error;
-  }
-}
-}
 module.exports = FuncionarioDAO;
