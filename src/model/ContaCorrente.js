@@ -1,51 +1,64 @@
-// tabelas/ContaCorrente.js
+// src/model/ContaCorrente.js
+
 const { DataTypes, Model } = require('sequelize');
 const sequelize = require('../util/database');
-const Conta = require('./Conta');
 
 class ContaCorrente extends Model {}
 
 ContaCorrente.init({
-    id_conta_corrente: {
-        type: DataTypes.INTEGER,
-        primaryKey: true,
-        autoIncrement: true,
-        allowNull: false,
-    },
-    limite: {
-        type: DataTypes.DECIMAL(15, 2),
-        allowNull: false,
-        defaultValue: 0,
-    },
-    data_vencimento: {
-        type: DataTypes.DATEONLY,
-        allowNull: false,
-    },
-    taxa_manutencao: {
-        type: DataTypes.DECIMAL(5, 2),
-        allowNull: false,
-        defaultValue: 0,
-    },
-    conta_id_conta: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: {
-            model: 'Conta', // Padronizado para string
-            key: 'id_conta',
-        },
-    },
+  // Mapeando as propriedades camelCase do JS para as colunas snake_case do banco.
+  idContaCorrente: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true,
+    field: 'id_conta_corrente'
+  },
+  idConta: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    unique: true, // Cada conta só pode ter um registro de conta corrente
+    field: 'id_conta'
+  },
+  limite: {
+    type: DataTypes.DECIMAL(15, 2),
+    allowNull: false,
+    defaultValue: 0,
+    field: 'limite'
+  },
+  dataVencimento: {
+    type: DataTypes.DATEONLY,
+    allowNull: false,
+    field: 'data_vencimento'
+  },
+  taxaManutencao: {
+    type: DataTypes.DECIMAL(5, 2),
+    allowNull: false,
+    defaultValue: 0,
+    field: 'taxa_manutencao'
+  },
 }, {
-    sequelize,
-    modelName: 'ContaCorrente',
-    tableName: 'conta_corrente',
-    timestamps: false,
+  sequelize,
+  modelName: 'ContaCorrente',
+  tableName: 'conta_corrente',
+  timestamps: false,
+  underscored: true
 });
 
-// Associação: Uma ContaCorrente pertence a uma Conta
-ContaCorrente.belongsTo(Conta, { foreignKey: 'conta_id_conta', as: 'conta' });
+/*
+  NOTA IMPORTANTE SOBRE ASSOCIAÇÕES:
+  Para evitar erros de 'dependência circular', a melhor prática é definir
+  TODAS as associações em um único arquivo central (como 'src/model/index.js')
+  depois que todos os modelos forem importados.
 
-// Associação Inversa: Uma Conta tem uma ContaCorrente (relação 1 para 1)
-Conta.hasOne(ContaCorrente, { foreignKey: 'conta_id_conta', as: 'contaCorrente' });
+  Exemplo de como ficaria nesse arquivo central:
 
+  const Conta = require('./Conta');
+  const ContaCorrente = require('./ContaCorrente');
+
+  // Relação 1 para 1: Uma Conta tem um registro de ContaCorrente.
+  Conta.hasOne(ContaCorrente, { foreignKey: 'id_conta', as: 'dadosCorrente' });
+  ContaCorrente.belongsTo(Conta, { foreignKey: 'id_conta', as: 'contaGeral' });
+
+*/
 
 module.exports = ContaCorrente;

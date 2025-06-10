@@ -1,44 +1,57 @@
-// tabelas/ContaPoupanca.js
+// src/model/ContaPoupanca.js
+
 const { DataTypes, Model } = require('sequelize');
 const sequelize = require('../util/database');
-const Conta = require('./Conta');
 
 class ContaPoupanca extends Model {}
 
 ContaPoupanca.init({
-    id_conta_poupanca: {
-        type: DataTypes.INTEGER,
-        primaryKey: true,
-        autoIncrement: true,
-        allowNull: false,
-    },
-    taxa_rendimento: {
-        type: DataTypes.DECIMAL(5, 2),
-        allowNull: false,
-    },
-    ultimo_rendimento: {
-        type: DataTypes.DATE,
-        allowNull: true,
-    },
-    conta_id_conta: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: {
-            model: 'Conta', // Padronizado
-            key: 'id_conta',
-        },
-    },
+  // Mapeando as propriedades camelCase do JS para as colunas snake_case do banco.
+  idContaPoupanca: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true,
+    field: 'id_conta_poupanca'
+  },
+  idConta: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    unique: true, // Conforme o banco de dados, cada conta só pode ter um registro de poupança
+    field: 'id_conta'
+  },
+  taxaRendimento: {
+    type: DataTypes.DECIMAL(5, 2),
+    allowNull: false,
+    field: 'taxa_rendimento'
+  },
+  ultimoRendimento: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'ultimo_rendimento'
+  },
 }, {
-    sequelize,
-    modelName: 'ContaPoupanca',
-    tableName: 'conta_poupanca',
-    timestamps: false,
+  sequelize,
+  modelName: 'ContaPoupanca',
+  tableName: 'conta_poupanca',
+  timestamps: false,
+  underscored: true
 });
 
-// Associação: Uma ContaPoupanca pertence a uma Conta
-ContaPoupanca.belongsTo(Conta, { foreignKey: 'conta_id_conta', as: 'conta' });
+/*
+  NOTA IMPORTANTE SOBRE ASSOCIAÇÕES:
+  Para evitar erros de 'dependência circular', a melhor prática é definir
+  TODAS as associações em um único arquivo central (como 'src/model/index.js')
+  depois que todos os modelos forem importados.
 
-// Associação Inversa: Uma Conta tem uma ContaPoupanca (relação 1 para 1)
-Conta.hasOne(ContaPoupanca, { foreignKey: 'conta_id_conta', as: 'contaPoupanca' });
+  Exemplo de como ficaria nesse arquivo central:
+
+  const Conta = require('./Conta');
+  const ContaPoupanca = require('./ContaPoupanca');
+
+  // Relação 1 para 1: Uma Conta tem um registro de ContaPoupanca.
+  Conta.hasOne(ContaPoupanca, { foreignKey: 'id_conta', as: 'dadosPoupanca' });
+  ContaPoupanca.belongsTo(Conta, { foreignKey: 'id_conta', as: 'contaGeral' });
+
+*/
 
 module.exports = ContaPoupanca;

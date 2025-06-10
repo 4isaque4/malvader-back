@@ -1,57 +1,63 @@
-// tabelas/Auditoria.js
+// src/model/Auditoria.js
 
-// Mudança 1: Importar 'Model' junto com 'DataTypes'
 const { DataTypes, Model } = require('sequelize');
 const sequelize = require('../util/database');
-const Usuario = require('./Usuario');
 
-// Mudança 2: Definir o modelo como uma classe que herda de Model
 class Auditoria extends Model {}
 
-// Mudança 3: Usar o método 'init' para definir colunas e opções
 Auditoria.init({
-    id_auditoria: {
-        type: DataTypes.INTEGER,
-        primaryKey: true,
-        autoIncrement: true,
-        allowNull: false,
-    },
-    acao: {
-        type: DataTypes.STRING(50),
-        allowNull: false,
-    },
-    data_hora: {
-        type: DataTypes.DATE,
-        allowNull: false,
-        defaultValue: DataTypes.NOW,
-    },
-    detalhes: {
-        type: DataTypes.TEXT,
-        allowNull: true,
-    },
-    Usuario_idUsuario: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: {
-            // Padronizado para usar o nome do modelo como string, igual ao Cliente.js
-            model: 'Usuario',
-            key: 'idUsuario',
-        },
-    },
+  // Mapeando as propriedades camelCase do JS para as colunas snake_case do banco.
+  idAuditoria: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true,
+    field: 'id_auditoria'
+  },
+  idUsuario: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    field: 'id_usuario'
+  },
+  acao: {
+    type: DataTypes.STRING(50),
+    allowNull: false,
+    field: 'acao'
+  },
+  dataHora: {
+    type: DataTypes.DATE,
+    allowNull: false,
+    defaultValue: DataTypes.NOW,
+    field: 'data_hora'
+  },
+  detalhes: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    field: 'detalhes'
+  },
 }, {
-    // Opções do modelo
-    sequelize, // Passar a conexão sequelize
-    modelName: 'Auditoria', // Definir o nome do modelo
-    tableName: 'auditoria',
-    timestamps: false,
+  sequelize,
+  modelName: 'Auditoria',
+  tableName: 'auditoria',
+  timestamps: false,
+  underscored: true
 });
 
-// Definição das associações
-Auditoria.belongsTo(Usuario, { foreignKey: 'Usuario_idUsuario', as: 'usuario' });
+/*
+  NOTA IMPORTANTE SOBRE ASSOCIAÇÕES:
+  Para evitar erros de 'dependência circular', a melhor prática é definir
+  TODAS as associações em um único arquivo central (como 'src/model/index.js')
+  depois que todos os modelos forem importados.
 
-// Para manter a consistência, definimos a relação inversa aqui também
-// Um usuário pode ter vários registros de auditoria (relação 1-para-N)
-Usuario.hasMany(Auditoria, { foreignKey: 'Usuario_idUsuario', as: 'auditorias' });
+  Exemplo de como ficaria nesse arquivo central:
 
+  const Usuario = require('./Usuario');
+  const Auditoria = require('./Auditoria');
+
+  // Relação 1 para N: Uma Auditoria pertence a um Usuário.
+  Auditoria.belongsTo(Usuario, { foreignKey: 'id_usuario', as: 'usuario' });
+  // Um usuário pode ter vários registros de auditoria.
+  Usuario.hasMany(Auditoria, { foreignKey: 'id_usuario', as: 'registrosAuditoria' });
+
+*/
 
 module.exports = Auditoria;
