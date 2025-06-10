@@ -3,20 +3,26 @@ const express = require('express');
 const cors = require('cors');
 const banco = require('./src/util/database');
 require('dotenv').config();
+require('./src/model/Associacoes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
+// Importação das rotas
 const usuarioRoutes = require('./view/routes/usuarioRoutes');
-app.use('/api/usuarios', usuarioRoutes);
-
 const clienteRoutes = require('./view/routes/clienteRoutes');
-app.use('/api/clientes', clienteRoutes);
-
 const funcionarioRoutes = require('./view/routes/funcionarioRoutes');
+const relatorioRoutes = require('./view/routes/relatorioRoutes');
+const agenciaRoutes = require('./view/routes/agenciaRoutes');
+
+// Uso das rotas
+app.use('/api/usuarios', usuarioRoutes);
+app.use('/api/clientes', clienteRoutes);
 app.use('/api/funcionarios', funcionarioRoutes);
+app.use('/api/relatorios', relatorioRoutes);
+app.use('/api/agencias', agenciaRoutes);
 
 
 app.get('/', (req, res) => {
