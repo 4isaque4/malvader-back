@@ -3,7 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const banco = require('./src/util/database');
 require('dotenv').config();
-require('./src/model/Associacoes');
+require('./src/model/associacoes'); // Corrigido para o nome do arquivo correto
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -16,6 +16,8 @@ const clienteRoutes = require('./view/routes/clienteRoutes');
 const funcionarioRoutes = require('./view/routes/funcionarioRoutes');
 const relatorioRoutes = require('./view/routes/relatorioRoutes');
 const agenciaRoutes = require('./view/routes/agenciaRoutes');
+const transacaoRoutes = require('./view/routes/transacaoRoutes'); // Adicionada a rota de transação
+const contaRoutes = require('./view/routes/contaRoutes');
 
 // Uso das rotas
 app.use('/api/usuarios', usuarioRoutes);
@@ -23,6 +25,8 @@ app.use('/api/clientes', clienteRoutes);
 app.use('/api/funcionarios', funcionarioRoutes);
 app.use('/api/relatorios', relatorioRoutes);
 app.use('/api/agencias', agenciaRoutes);
+app.use('/api/transacoes', transacaoRoutes); // Adicionada a rota de transação
+app.use('/api/contas', contaRoutes);
 
 
 app.get('/', (req, res) => {

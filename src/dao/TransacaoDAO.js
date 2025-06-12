@@ -1,64 +1,25 @@
-// src/dao/transacaoDAO.js
-
 const sequelize = require('../util/database');
 const { Op } = require('sequelize');
-const Transacao = require('../model/Transacao'); // Caminho corrigido
-const Conta = require('../model/Conta');       // Caminho corrigido
+const Transacao = require('../model/Transacao');
+const Conta = require('../model/Conta');
 
 class TransacaoDAO {
 
     /**
-     * Cria um registro de transação e atualiza os saldos das contas.
-     * Este método deve SEMPRE ser chamado dentro de uma transação Sequelize.
+     * Cria um registro de transação. A atualização dos saldos é feita por um TRIGGER no banco de dados.
+     * Este método deve ser chamado dentro de uma transação do Sequelize para garantir a atomicidade.
      * @param {object} dados - { idContaOrigem, idContaDestino, valor, tipoTransacao, descricao }
-     * @param {object} transaction - O objeto de transação do Sequelize.
+     * @param {object} options - Opções que podem incluir a transação.
      * @returns {Promise<Transacao>}
      */
-    static async criar(dados, { transaction }) {
-        const { idContaOrigem, idContaDestino, valor, tipoTransacao, descricao } = dados;
-
+    static async criar(dados, options = {}) {
         try {
-            // 1. Atualiza saldo da conta de origem (se houver)
-            if (idContaOrigem) {
-                const contaOrigem = await Conta.findByPk(idContaOrigem, {
-                    lock: transaction.LOCK.UPDATE, // Trava a linha para evitar race conditions
-                    transaction
-                });
-                
-                // Validação de saldo
-                if (!contaOrigem || contaOrigem.saldo < valor) {
-                    throw new Error('Saldo insuficiente na conta de origem.');
-                }
-                contaOrigem.saldo -= valor;
-                await contaOrigem.save({ transaction });
-            }
-
-            // 2. Atualiza saldo da conta de destino (se houver)
-            if (idContaDestino) {
-                const contaDestino = await Conta.findByPk(idContaDestino, {
-                    lock: transaction.LOCK.UPDATE,
-                    transaction
-                });
-
-                if (!contaDestino) {
-                    throw new Error('Conta de destino não encontrada.');
-                }
-                contaDestino.saldo += valor;
-                await contaDestino.save({ transaction });
-            }
-
-            // 3. Cria o registro da transação usando as propriedades camelCase
-            return await Transacao.create({
-                idContaOrigem,
-                idContaDestino,
-                valor,
-                tipoTransacao,
-                descricao
-            }, { transaction });
-
+            // A lógica de atualização de saldo foi removida daqui porque agora é
+            // gerenciada por um TRIGGER diretamente no banco de dados,
+            // o que é mais seguro e eficiente. O DAO apenas cria o registro da transação.
+            return await Transacao.create(dados, options);
         } catch (error) {
             console.error('Erro durante a criação da transação no DAO:', error);
-            // Re-lança o erro para que o controller possa fazer o rollback da transação
             throw error;
         }
     }
@@ -93,7 +54,7 @@ class TransacaoDAO {
             return await Transacao.findAndCountAll({
                 where: {
                     [Op.or]: [
-                        // Usa as propriedades camelCase do modelo
+                        // CORRIGIDO: Usa as propriedades camelCase do modelo.
                         { idContaOrigem: idConta },
                         { idContaDestino: idConta }
                     ]
@@ -108,6 +69,29 @@ class TransacaoDAO {
             });
         } catch (error) {
             console.error(`Erro ao buscar extrato para a conta ${idConta}:`, error);
+            throw error;
+        }
+    }
+    
+    /**
+     * Lista todas as transações do sistema (rota de administrador).
+     * @param {object} options - { limit, offset } para paginação
+     * @returns {Promise<{count: number, rows: Transacao[]}>}
+     */
+    static async buscarTodas({ limit = 25, offset = 0 } = {}) {
+        try {
+            return await Transacao.findAndCountAll({
+                include: [
+                    { model: Conta, as: 'contaOrigem', attributes: ['idConta', 'numeroConta'] },
+                    { model: Conta, as: 'contaDestino', attributes: ['idConta', 'numeroConta'] }
+                ],
+                order: [['dataHora', 'DESC']],
+                limit,
+                offset
+            });
+        } catch (error)
+        {
+            console.error("Erro ao buscar todas as transações:", error);
             throw error;
         }
     }

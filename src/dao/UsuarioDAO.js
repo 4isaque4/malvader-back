@@ -1,6 +1,7 @@
 // src/dao/usuarioDAO.js
 
 const Usuario = require('../model/Usuario'); 
+const Cliente = require('../model/Cliente'); // ✅ Adicionado para a inclusão
 const { Op } = require('sequelize');
 
 class UsuarioDAO {
@@ -25,14 +26,26 @@ class UsuarioDAO {
     }
   }
 
+  /**
+   * MÉTODO CORRIGIDO: Agora inclui o perfil de cliente associado na busca.
+   * Busca um usuário pelo CPF ou pelo E-mail para verificar duplicidade.
+   * @param {string} cpf - O CPF do usuário.
+   * @param {string} email - O e-mail do usuário.
+   * @returns {Promise<Usuario|null>} O usuário se encontrado, com seu perfil de cliente.
+   */
   static async buscarPorCpfOuEmail(cpf, email) {
     try {
       return await Usuario.findOne({
         where: {
           [Op.or]: [
-            { cpf },
-            { email }
+            { cpf: cpf },
+            { email: email }
           ]
+        },
+        // A inclusão do modelo Cliente garante que 'perfilCliente' não será undefined.
+        include: {
+            model: Cliente,
+            as: 'perfilCliente' 
         }
       });
     } catch (error) {
@@ -40,14 +53,7 @@ class UsuarioDAO {
       throw error;
     }
   }
-
-  /**
-   * ✅ MÉTODO FALTANTE ADICIONADO:
-   * Busca um usuário pelo e-mail e pelo OTP fornecido.
-   * @param {string} email - O e-mail do usuário.
-   * @param {string} otp - O código OTP a ser verificado.
-   * @returns {Promise<Usuario|null>} Retorna o usuário se a combinação for encontrada.
-   */
+  
   static async buscarPorEmailEOTP(email, otp) {
     try {
       return await Usuario.findOne({

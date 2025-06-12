@@ -22,5 +22,8 @@ router.post('/solicitar-otp', UsuarioController.solicitarOTP);
 // URL Final: POST /api/usuarios/verificar-otp
 router.post('/verificar-otp', UsuarioController.verificarOTP);
 
+router.post('/login', UsuarioController.login);
+
+
 
 module.exports = router;
