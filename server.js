@@ -4,6 +4,7 @@ const cors = require('cors');
 const banco = require('./src/util/database');
 require('dotenv').config();
 require('./src/model/associacoes'); // Corrigido para o nome do arquivo correto
+const { verificarConexaoEmail } = require('./src/helpers/emailService')
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -44,6 +45,7 @@ app.listen(PORT, async () => {
   try {
     await banco.authenticate();
     console.log('Conexão com o banco de dados estabelecida com sucesso!');
+    await verificarConexaoEmail();
   } catch (error) {
     console.error('Erro ao conectar com o banco de dados:', error);
   }

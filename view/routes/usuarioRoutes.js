@@ -2,28 +2,22 @@
 
 const express = require('express');
 const router = express.Router();
-// Garante que o nome do arquivo importado tenha a capitalização correta.
 const UsuarioController = require('../../src/controller/usuarioController');
+const authMiddleware = require('../../src/helpers/authMiddleware');
+const temPermissao = require('../../src/helpers/permissionMiddleware');
 
-// Rota para listar todos os usuários
-// URL Final: GET /api/usuarios/listar
-router.get('/listar', UsuarioController.getAll);
-
-// Rota de criação foi REMOVIDA. A criação de usuários agora é feita através de:
-// POST /api/clientes/criar
-// ou
-// POST /api/funcionarios/criar
-
-
-// URL Final: POST /api/usuarios/solicitar-otp
-router.post('/solicitar-otp', UsuarioController.solicitarOTP);
-
-
-// URL Final: POST /api/usuarios/verificar-otp
-router.post('/verificar-otp', UsuarioController.verificarOTP);
-
+// ROTA PÚBLICA: para qualquer pessoa fazer login
 router.post('/login', UsuarioController.login);
 
+// ROTAS PÚBLICAS: para o fluxo de autenticação com OTP
+router.post('/solicitar-otp', UsuarioController.solicitarOTP);
+router.post('/verificar-otp', UsuarioController.verificarOTP);
 
+// ROTA PROTEGIDA: Apenas funcionários logados podem ver a lista de todos os usuários
+router.get('/listar',
+    authMiddleware,
+    temPermissao(['ESTAGIARIO', 'ATENDENTE', 'GERENTE']),
+    UsuarioController.getAll
+);
 
 module.exports = router;

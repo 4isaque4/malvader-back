@@ -3,14 +3,21 @@
 const express = require('express');
 const router = express.Router();
 const RelatorioController = require('../../src/controller/relatorioController');
+const authMiddleware = require('../../src/helpers/authMiddleware');
+const temPermissao = require('../../src/helpers/permissionMiddleware');
 
-// Rota para gerar o relatório de movimentações recentes
-// Exemplo de acesso: GET http://localhost:3000/api/relatorios/movimentacoes
-router.get('/movimentacoes', RelatorioController.gerarRelatorioMovimentacoes);
+// Gerar relatório de movimentações (qualquer funcionário)
+router.get('/movimentacoes',
+    authMiddleware,
+    temPermissao(['ESTAGIARIO', 'ATENDENTE', 'GERENTE']),
+    RelatorioController.gerarRelatorioMovimentacoes
+);
 
-// Rota para gerar o relatório de resumo de contas
-// Exemplo de acesso: GET http://localhost:3000/api/relatorios/resumo-contas
-router.get('/resumo-contas', RelatorioController.gerarRelatorioResumoContas);
-
+// Gerar relatório de resumo de contas (qualquer funcionário)
+router.get('/resumo-contas',
+    authMiddleware,
+    temPermissao(['ESTAGIARIO', 'ATENDENTE', 'GERENTE']),
+    RelatorioController.gerarRelatorioResumoContas
+);
 
 module.exports = router;

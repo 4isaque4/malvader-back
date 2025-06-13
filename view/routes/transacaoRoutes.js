@@ -3,13 +3,21 @@
 const express = require('express');
 const router = express.Router();
 const TransacaoController = require('../../src/controller/transacaoController');
+const authMiddleware = require('../../src/helpers/authMiddleware');
+const temPermissao = require('../../src/helpers/permissionMiddleware');
 
-// Rota para listar todas as transações (com paginação)
-// Exemplo de acesso: GET http://localhost:3000/api/transacoes
-router.get('/', TransacaoController.getAll);
+// Listar todas as transações do sistema (requer permissão)
+router.get('/',
+    authMiddleware,
+    temPermissao(['ATENDENTE', 'GERENTE']),
+    TransacaoController.getAll
+);
 
-// Rota para buscar uma transação específica pelo ID
-// Exemplo de acesso: GET http://localhost:3000/api/transacoes/1
-router.get('/:id', TransacaoController.getById);
+// Buscar uma transação específica pelo ID (requer permissão)
+router.get('/:id',
+    authMiddleware,
+    temPermissao(['ATENDENTE', 'GERENTE']),
+    TransacaoController.getById
+);
 
 module.exports = router;

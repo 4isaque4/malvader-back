@@ -3,17 +3,28 @@
 const express = require('express');
 const router = express.Router();
 const AgenciaController = require('../../src/controller/agenciaController');
+const authMiddleware = require('../../src/helpers/authMiddleware');
+const temPermissao = require('../../src/helpers/permissionMiddleware');
 
-// Rota para criar uma nova agência (junto com seu endereço)
-// Exemplo de acesso: POST http://localhost:3000/api/agencias/criar
-router.post('/criar', AgenciaController.create);
+// Apenas um GERENTE logado pode criar uma nova agência
+router.post('/criar',
+    authMiddleware,
+    temPermissao(['GERENTE']),
+    AgenciaController.create
+);
 
-// Rota para listar todas as agências
-// Exemplo de acesso: GET http://localhost:3000/api/agencias/listar
-router.get('/listar', AgenciaController.getAll);
+// Qualquer funcionário logado pode listar as agências
+router.get('/listar',
+    authMiddleware,
+    temPermissao(['ESTAGIARIO', 'ATENDENTE', 'GERENTE']),
+    AgenciaController.getAll
+);
 
-// Rota para buscar uma agência específica pelo ID
-// Exemplo de acesso: GET http://localhost:3000/api/agencias/1
-router.get('/:id', AgenciaController.getById);
+// Qualquer funcionário logado pode ver os detalhes de uma agência
+router.get('/:id',
+    authMiddleware,
+    temPermissao(['ESTAGIARIO', 'ATENDENTE', 'GERENTE']),
+    AgenciaController.getById
+);
 
 module.exports = router;

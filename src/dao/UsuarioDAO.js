@@ -1,7 +1,8 @@
 // src/dao/usuarioDAO.js
 
 const Usuario = require('../model/Usuario'); 
-const Cliente = require('../model/Cliente'); // ✅ Adicionado para a inclusão
+const Cliente = require('../model/Cliente');
+const Funcionario = require('../model/Funcionario'); // ✅ Import adicionado
 const { Op } = require('sequelize');
 
 class UsuarioDAO {
@@ -19,7 +20,13 @@ class UsuarioDAO {
 
   static async buscarPorEmail(email) {
     try {
-      return await Usuario.findOne({ where: { email } });
+      return await Usuario.findOne({ 
+        where: { email },
+        include: [
+            { model: Cliente, as: 'perfilCliente' },
+            { model: Funcionario, as: 'perfilFuncionario' }
+        ]
+      });
     } catch (error) {
       console.error(`Erro ao buscar usuário por email ${email}:`, error);
       throw error;
@@ -27,11 +34,8 @@ class UsuarioDAO {
   }
 
   /**
-   * MÉTODO CORRIGIDO: Agora inclui o perfil de cliente associado na busca.
-   * Busca um usuário pelo CPF ou pelo E-mail para verificar duplicidade.
-   * @param {string} cpf - O CPF do usuário.
-   * @param {string} email - O e-mail do usuário.
-   * @returns {Promise<Usuario|null>} O usuário se encontrado, com seu perfil de cliente.
+   * ✅ MÉTODO ATUALIZADO E MAIS ROBUSTO
+   * Busca um usuário pelo CPF ou pelo E-mail, incluindo os perfis de cliente e funcionário.
    */
   static async buscarPorCpfOuEmail(cpf, email) {
     try {
@@ -42,11 +46,11 @@ class UsuarioDAO {
             { email: email }
           ]
         },
-        // A inclusão do modelo Cliente garante que 'perfilCliente' não será undefined.
-        include: {
-            model: Cliente,
-            as: 'perfilCliente' 
-        }
+        // Inclui ambos os perfis possíveis. O Sequelize trará o que existir.
+        include: [
+            { model: Cliente, as: 'perfilCliente' },
+            { model: Funcionario, as: 'perfilFuncionario' }
+        ]
       });
     } catch (error) {
       console.error(`Erro ao buscar por CPF ou E-mail:`, error);

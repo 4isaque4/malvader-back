@@ -3,24 +3,28 @@
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
-// Este middleware verifica o token JWT enviado em cada requisição protegida.
 function authMiddleware(req, res, next) {
+    console.log('--- 1. MIDDLEWARE DE AUTENTICAÇÃO ATIVADO ---'); // DEBUG
     const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1]; // Formato: "Bearer TOKEN"
+    const token = authHeader && authHeader.split(' ')[1];
 
     if (!token) {
+        console.log('DEBUG: Token não encontrado no header.'); // DEBUG
         return res.status(401).json({ erro: 'Acesso negado. Nenhum token fornecido.' });
     }
 
     try {
-        // Verifica o token e decodifica o payload (que deve conter id_usuario, tipo_usuario, cargo, etc.)
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         
-        // Anexa os dados do usuário à requisição para uso posterior nos controllers e middlewares
+        console.log('--- 2. TOKEN DECodificado COM SUCESSO ---'); // DEBUG
+        console.log('Payload do Token:', decoded); // DEBUG - Mostra o conteúdo do token
+        
         req.usuario = decoded; 
         
-        next(); // Continua para a próxima etapa (outro middleware ou o controller)
+        console.log('--- 3. USUÁRIO ANEXADO À REQUISIÇÃO. SEGUINDO PARA O CONTROLLER ---'); // DEBUG
+        next();
     } catch (error) {
+        console.log('DEBUG: Erro ao verificar o token:', error.message); // DEBUG
         res.status(401).json({ erro: 'Token inválido ou expirado.' });
     }
 }

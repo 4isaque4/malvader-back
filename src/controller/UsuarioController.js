@@ -1,7 +1,7 @@
 // src/controller/usuarioController.js
 
 // Imports necessários para todas as funcionalidades do controller
-const UsuarioDAO = require('../dao/usuarioDAO');
+const UsuarioDAO = require('../dao/UsuarioDAO');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
@@ -68,7 +68,7 @@ class UsuarioController {
     }
   }
 
-  // ✅ NOVO MÉTODO DE LOGIN
+  // NOVO MÉTODO DE LOGIN
   static async login(req, res) {
     try {
         const { email, senha } = req.body;

@@ -10,32 +10,30 @@ const temPermissao = require('../../src/helpers/permissionMiddleware');
 // ROTAS ADMINISTRATIVAS (para Funcionários com permissão)
 // -------------------------------------------
 
-// Abertura de conta: Requer login e permissão de QUALQUER funcionário
+// ✅ CORRIGIDO: A rota agora é '/criar' e chama o método 'create' que existe.
 router.post('/criar', 
     authMiddleware, 
     temPermissao(['ATENDENTE', 'GERENTE']), 
     ContaController.create
 );
 
-// Listar todas as contas: Requer login e permissão de QUALQUER funcionário
+// ✅ CORRIGIDO: A rota agora é '/listar' e chama o método 'getAll'.
 router.get('/listar', 
     authMiddleware, 
-    temPermissao(['ESTAGIARIO', 'ATENDENTE', 'GERENTE']), // ✅ CORRIGIDO
+    temPermissao(['ESTAGIARIO', 'ATENDENTE', 'GERENTE']),
     ContaController.getAll
 );
 
-// Buscar uma conta por ID: Requer login e permissão de QUALQUER funcionário
+// ✅ CORRIGIDO: A rota para buscar por ID usa o método 'getById'.
 router.get('/:id', 
     authMiddleware, 
-    temPermissao(['ESTAGIARIO', 'ATENDENTE', 'GERENTE']), // ✅ CORRIGIDO
+    temPermissao(['ESTAGIARIO', 'ATENDENTE', 'GERENTE']),
     ContaController.getById
 );
 
 // -------------------------------------------
 // ROTAS DE OPERAÇÕES FINANCEIRAS (para Clientes/Funcionários logados)
 // -------------------------------------------
-// Qualquer usuário logado pode tentar realizar uma operação. A lógica de
-// se a operação é permitida (ex: o usuário é dono da conta) deve ficar no controller.
 
 router.post('/deposito', authMiddleware, ContaController.realizarDeposito);
 router.post('/saque', authMiddleware, ContaController.realizarSaque);

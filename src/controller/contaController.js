@@ -2,38 +2,28 @@
 
 const sequelize = require('../util/database');
 const ContaDAO = require('../dao/contaDAO');
-const ClienteDAO = require('../dao/clienteDAO');
+const UsuarioDAO = require('../dao/UsuarioDAO');
 const TransacaoDAO = require('../dao/transacaoDAO');
-const UsuarioDAO = require('../dao/usuarioDAO');
 
 class ContaController {
 
     static async create(req, res) {
         const t = await sequelize.transaction();
         try {
-            const {
-                cpfCliente,
-                idAgencia,
-                tipoConta,
-                dadosEspecificos
-            } = req.body;
-
+            const { cpfCliente, idAgencia, tipoConta, dadosEspecificos } = req.body;
             if (!cpfCliente || !idAgencia || !tipoConta || !dadosEspecificos) {
                 await t.rollback();
                 return res.status(400).json({ erro: 'Dados insuficientes para abrir a conta.' });
             }
-
             const usuario = await UsuarioDAO.buscarPorCpfOuEmail(cpfCliente, null);
             if (!usuario || !usuario.perfilCliente) {
                 await t.rollback();
                 return res.status(404).json({ erro: 'Cliente não encontrado com o CPF fornecido.' });
             }
             const idCliente = usuario.perfilCliente.idCliente;
-            
             const numeroConta = `${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
             const dadosGerais = { idCliente, idAgencia, tipoConta, numeroConta };
             const novaConta = await ContaDAO.criar(dadosGerais, dadosEspecificos, { transaction: t });
-
             await t.commit();
             res.status(201).json(novaConta);
         } catch (error) {
@@ -43,10 +33,6 @@ class ContaController {
         }
     }
 
-    /**
-     *  NOVO MÉTODO ADICIONADO
-     * Lista todas as contas. Rota para funcionários com permissão.
-     */
     static async getAll(req, res) {
         try {
             const contas = await ContaDAO.buscarTodas();
@@ -57,10 +43,6 @@ class ContaController {
         }
     }
     
-    /**
-     *  NOVO MÉTODO ADICIONADO
-     * Busca os detalhes de uma conta específica pelo ID.
-     */
     static async getById(req, res) {
         try {
             const { id } = req.params;
@@ -80,6 +62,8 @@ class ContaController {
         const t = await sequelize.transaction();
         try {
             const { numeroConta, valor } = req.body;
+            const idUsuarioOperador = req.usuario.id_usuario;
+
             if (!numeroConta || !valor || valor <= 0) {
                 await t.rollback();
                 return res.status(400).json({ erro: 'Número da conta e valor (positivo) são obrigatórios.' });
@@ -93,7 +77,8 @@ class ContaController {
                 idContaDestino: contaDestino.idConta,
                 valor,
                 tipoTransacao: 'DEPOSITO',
-                descricao: `Depósito na conta ${numeroConta}`
+                descricao: `Depósito na conta ${numeroConta}`,
+                idUsuarioOperador: idUsuarioOperador
             };
             const transacaoCompleta = await TransacaoDAO.criar(dadosTransacao, { transaction: t });
             await t.commit();
@@ -105,10 +90,15 @@ class ContaController {
         }
     }
 
+    /**
+     * ✅ CORRIGIDO: Agora verifica o saldo antes de permitir o saque.
+     */
     static async realizarSaque(req, res) {
         const t = await sequelize.transaction();
         try {
             const { numeroConta, valor } = req.body;
+            const idUsuarioOperador = req.usuario.id_usuario;
+
             if (!numeroConta || !valor || valor <= 0) {
                 await t.rollback();
                 return res.status(400).json({ erro: 'Número da conta e valor (positivo) são obrigatórios.' });
@@ -118,11 +108,19 @@ class ContaController {
                 await t.rollback();
                 return res.status(404).json({ erro: 'Conta de origem não encontrada.' });
             }
+
+            // Validação de saldo disponível
+            if (contaOrigem.saldo < valor) {
+                await t.rollback();
+                return res.status(400).json({ erro: 'Saldo insuficiente para realizar o saque.' });
+            }
+
             const dadosTransacao = {
                 idContaOrigem: contaOrigem.idConta,
                 valor,
                 tipoTransacao: 'SAQUE',
-                descricao: `Saque da conta ${numeroConta}`
+                descricao: `Saque da conta ${numeroConta}`,
+                idUsuarioOperador: idUsuarioOperador
             };
             const transacaoCompleta = await TransacaoDAO.criar(dadosTransacao, { transaction: t });
             await t.commit();
@@ -134,10 +132,15 @@ class ContaController {
         }
     }
 
+    /**
+     * ✅ CORRIGIDO: Agora verifica o saldo antes de permitir a transferência.
+     */
     static async realizarTransferencia(req, res) {
         const t = await sequelize.transaction();
         try {
             const { numeroContaOrigem, numeroContaDestino, valor } = req.body;
+            const idUsuarioOperador = req.usuario.id_usuario;
+
             if (!numeroContaOrigem || !numeroContaDestino || !valor || valor <= 0) {
                 await t.rollback();
                 return res.status(400).json({ erro: 'Contas de origem, destino e valor (positivo) são obrigatórios.' });
@@ -148,12 +151,20 @@ class ContaController {
                 await t.rollback();
                 return res.status(404).json({ erro: 'Uma ou ambas as contas não foram encontradas.' });
             }
+
+            // Validação de saldo disponível
+            if (contaOrigem.saldo < valor) {
+                await t.rollback();
+                return res.status(400).json({ erro: 'Saldo insuficiente para realizar a transferência.' });
+            }
+
             const dadosTransacao = {
                 idContaOrigem: contaOrigem.idConta,
                 idContaDestino: contaDestino.idConta,
                 valor,
                 tipoTransacao: 'TRANSFERENCIA',
-                descricao: `Transferência de ${numeroContaOrigem} para ${numeroContaDestino}`
+                descricao: `Transferência de ${numeroContaOrigem} para ${numeroContaDestino}`,
+                idUsuarioOperador: idUsuarioOperador
             };
             const transacaoCompleta = await TransacaoDAO.criar(dadosTransacao, { transaction: t });
             await t.commit();

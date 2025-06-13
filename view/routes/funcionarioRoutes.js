@@ -1,21 +1,37 @@
-//Rotas como /api/funcionarios para operações dos funcionários (cadastro, login, etc.).
+// view/routes/funcionarioRoutes.js
+
 const express = require('express');
 const router = express.Router();
 const FuncionarioController = require('../../src/controller/funcionarioController');
+const authMiddleware = require('../../src/helpers/authMiddleware');
+const temPermissao = require('../../src/helpers/permissionMiddleware');
 
-//GET
-//router.get('/:id', FuncionarioController.getById);
+// Criar um novo funcionário (apenas gerentes)
+router.post('/criar',
+   authMiddleware,
+   temPermissao(['GERENTE']),
+    FuncionarioController.create
+);
 
-// GET 
-router.get('/listar', FuncionarioController.getAll)
+// Listar todos os funcionários
+router.get('/listar',
+    authMiddleware,
+    temPermissao(['ESTAGIARIO', 'ATENDENTE', 'GERENTE']),
+    FuncionarioController.getAll
+);
 
-// POST
-router.post('/criar', FuncionarioController.create);
+// Atualizar um funcionário (apenas gerentes)
+router.put('/:cpf',
+    authMiddleware,
+    temPermissao(['GERENTE']),
+    FuncionarioController.update
+);
 
-// PUT 
-router.put('/atualizar/:cpf', FuncionarioController.update);
-
-// DELETE 
-router.delete('/deletar/:cpf', FuncionarioController.delete);
+// Deletar um funcionário (apenas gerentes)
+router.delete('/:cpf',
+    authMiddleware,
+    temPermissao(['GERENTE']),
+    FuncionarioController.delete
+);
 
 module.exports = router;
