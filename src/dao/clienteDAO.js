@@ -1,8 +1,8 @@
 // src/dao/clienteDAO.js
 
 const sequelize = require('../util/database');
-const Usuario = require('../model/Usuario');
-const Cliente = require('../model/Cliente');
+const Usuario = require('../model/usuario');
+const Cliente = require('../model/cliente');
 
 class ClienteDAO {
   

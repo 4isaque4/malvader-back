@@ -1,6 +1,6 @@
 // src/dao/enderecoDAO.js
 
-const Endereco = require('../model/Endereco');
+const Endereco = require('../model/endereco');
 
 class EnderecoDAO {
     /**

@@ -1,13 +1,13 @@
 // src/dao/contaDAO.js
 
 const sequelize = require('../util/database');
-const Conta = require('../model/Conta');
-const Cliente = require('../model/Cliente');
-const Usuario = require('../model/Usuario');
-const Agencia = require('../model/Agencia');
-const ContaCorrente = require('../model/ContaCorrente');
-const ContaPoupanca = require('../model/ContaPoupanca');
-const ContaInvestimento = require('../model/ContaInvestimento');
+const Conta = require('../model/conta');
+const Cliente = require('../model/cliente');
+const Usuario = require('../model/usuario');
+const Agencia = require('../model/agencia');
+const ContaCorrente = require('../model/contaCorrente');
+const ContaPoupanca = require('../model/contaPoupanca');
+const ContaInvestimento = require('../model/contaInvestimento');
 
 class ContaDAO {
 

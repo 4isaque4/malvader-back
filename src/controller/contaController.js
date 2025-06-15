@@ -2,7 +2,7 @@
 
 const sequelize = require('../util/database');
 const ContaDAO = require('../dao/contaDAO');
-const UsuarioDAO = require('../dao/UsuarioDAO');
+const UsuarioDAO = require('../dao/usuarioDAO');
 const TransacaoDAO = require('../dao/transacaoDAO');
 
 class ContaController {

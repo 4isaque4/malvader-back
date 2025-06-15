@@ -2,7 +2,7 @@
 
 const express = require('express');
 const router = express.Router();
-const UsuarioController = require('../../src/controller/usuarioController');
+const UsuarioController = require('../../src/controller/UsuarioController');
 const authMiddleware = require('../../src/helpers/authMiddleware');
 const temPermissao = require('../../src/helpers/permissionMiddleware');
 

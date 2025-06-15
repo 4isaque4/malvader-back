@@ -1,8 +1,8 @@
 // src/dao/funcionarioDAO.js
 
 const sequelize = require('../util/database');
-const Usuario = require('../model/Usuario');
-const Funcionario = require('../model/Funcionario');
+const Usuario = require('../model/usuario');
+const Funcionario = require('../model/funcionario');
 
 class FuncionarioDAO {
   

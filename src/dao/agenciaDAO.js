@@ -1,7 +1,7 @@
 // src/dao/agenciaDAO.js
 
-const Agencia = require('../model/Agencia');
-const Endereco = require('../model/Endereco');
+const Agencia = require('../model/agencia');
+const Endereco = require('../model/endereco');
 
 class AgenciaDAO {
     /**

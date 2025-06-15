@@ -2,7 +2,7 @@
 
 const sequelize = require('../util/database');
 const ClienteDAO = require('../dao/clienteDAO');
-const UsuarioDAO = require('../dao/UsuarioDAO');
+const UsuarioDAO = require('../dao/usuarioDAO');
 const bcrypt = require('bcrypt');
 
 class ClienteController {
