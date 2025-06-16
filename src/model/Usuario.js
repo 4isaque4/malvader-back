@@ -6,7 +6,6 @@ const sequelize = require('../util/database');
 class Usuario extends Model {}
 
 // O modelo é inicializado com a nova estrutura, mapeando os nomes
-// do JavaScript (camelCase) para os nomes das colunas do banco (snake_case)
 // usando a propriedade 'field'.
 Usuario.init({
   id_usuario: { // Mantido como snake_case para consistência com o banco, mas camelCase (idUsuario) também é comum aqui.
